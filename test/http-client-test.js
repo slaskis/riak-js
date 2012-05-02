@@ -96,6 +96,28 @@ describe('http client',function(){
     })
   })
 
+  it('.resources(fn)',function(done){
+    db.resources(function(err,resources){
+      resources.should.have.property('riak_kv_wm_buckets')
+      resources.should.have.property('riak_kv_wm_props')
+      done(err)
+    })
+  })
+
+  it('.ping(fn)',function(done){
+    db.ping(function(err,pong){
+      pong.should.equal(true)
+      done(err)
+    })
+  })
+
+  it('.stats(fn)',function(done){
+    db.stats(function(err,stats){
+      stats.should.have.property('nodename','riak@127.0.0.1')
+      done(err)
+    })
+  })
+
   it('should emit error when trying to connect to non-existent instance',function(done){
     var db2 = new HttpClient({port:64208})
     db2.on('error',function(err){
@@ -120,6 +142,7 @@ describe('http client',function(){
         --pending || done()
       }
       many.forEach(function(key){
+        // forcing key to string because `0` will make it a POST
         db.save('test-keys',key.toString(),key,next);
       })
     })
@@ -189,77 +212,29 @@ describe('http client',function(){
 
   })
 
+  describe('custom meta',function(){
+
+    function CustomMeta(){
+      HttpMeta.apply(this, arguments);
+    }
+    util.inherits(CustomMeta, HttpMeta);
+
+    var _parse = HttpMeta.prototype.parse;
+    CustomMeta.prototype.parse = function(data) {
+      var result = _parse.call(this, data);
+      if (result instanceof Object) result.intercepted = true;
+      return result;
+    }
+
+    it('should fetch with a custom meta',function(done){
+      var meta = new CustomMeta();
+      db.get('test-users','fran@email.com', meta, function(err,user,meta){
+        user.should.have.property('intercepted',true)
+        done(err)
+      })
+    })
+
+  })
 
 
 })
-
-return
-
-seq()
-  
-  .seq(function(buckets) {
-    test('Get the properties of a bucket');
-    var bucket = buckets[0];
-    db.getBucket(bucket, this);
-  })
-  .seq(function(props) {
-    assert.ok(props && props.r);
-    this.ok()
-  })
-  
-  .seq(function() {
-    test("List resources");
-    db.resources(this);
-  })
-  .seq(function(resources) {
-    assert.ok(resources && resources.riak_kv_wm_buckets);
-    this.ok();
-  })
-  
-  .seq(function() {
-    test('Ping');
-    db.ping(this);
-  })
-  .seq(function(pong) {
-    assert.ok(pong);
-    this.ok()
-  })
-  
-  .seq(function() {
-    test('Stats');
-    db.stats(this);
-  })
-  .seq(function(stats) {
-    assert.ok(stats.riak_core_version);
-    this.ok();
-  })
-  
-  .seq(function() {
-    test('Custom Meta');
-    var meta = new CustomMeta();
-    db.get('users', 'test2@gmail.com', meta, this);
-  })
-  .seq(function(user) {
-    assert.equal(user.intercepted, true);
-    this.ok();
-  })
-    
-  .catch(function(err) {
-    console.log(err.stack);
-    process.exit(1);
-  });
-  
-/* Custom Meta */
-
-var CustomMeta = function() {
-  var args = Array.prototype.slice.call(arguments);
-  HttpMeta.apply(this, args);
-}
-
-util.inherits(CustomMeta, HttpMeta);
-
-CustomMeta.prototype.parse = function(data) {
-  var result = HttpMeta.prototype.parse.call(this, data);
-  if (result instanceof Object) result.intercepted = true;
-  return result;
-}
