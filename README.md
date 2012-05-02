@@ -35,6 +35,19 @@ Follow updates on Twitter: [@riakjs](http://twitter.com/riakjs)
  - Use path internally but don't expose it as API (see `path` branch), to prepare for new URIs in Riak 1.0
  - More rigorous test suite (port from master)
  - Port documentation, update and deploy to `gh-pages`
+ - Riak repl. Using the client as the scope it would be nice to have a session like:
+    ```
+    > buckets
+    ['x','y','z']
+    > getBucket('x')
+    {...properties...}
+    > keys('x')
+    ['a','b','c'...] (streaming?)
+    > save('x','a',{hello:'world'})
+    OK
+    > get('x','a')
+    {hello:'world'}
+    ```
 
 ##### LATER
  - Integrate test backend
