@@ -162,22 +162,20 @@ describe('http client',function(){
       })
     })
 
-    // FIXME this one fails...
-    //       probably because of the ones that was POSTed
-    // it('should stream those 500 keys',function(done){
-    //   var keys = [];
-    //   db.keys('test-keys')
-    //     .on('keys',function(k){keys = keys.concat(k)})
-    //     .on('error',done)
-    //     .on('end',function(){
-    //       // sorted and stringified for a nice diff error
-    //       var m = many.sort().join('\n')
-    //         , k = keys.sort().join('\n')
-    //       m.should.eql(k)
-    //       done()
-    //     })
-    //     .start()
-    // })
+    it('should stream those 500 keys',function(done){
+      var keys = [];
+      db.keys('test-keys')
+        .on('keys',function(k){keys = keys.concat(k)})
+        .on('error',done)
+        .on('end',function(){
+          // sorted and stringified for a nice diff error
+          var m = many.sort().join('\n')
+            , k = keys.sort().join('\n')
+          m.should.eql(k)
+          done()
+        })
+        .start()
+    })
 
     it('should count keys',function(done){
       db.count('test-keys',function(err,count){

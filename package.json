@@ -52,6 +52,6 @@
     "node": ">=0.4.0"
   },
   "scripts": {
-    "test": "mocha -R spec -r should -g \"streaming keys\" test/http-client-test.js"
+    "test": "mocha -R spec -r should test/http-client-test.js"
   }
 }
