@@ -1,13 +1,11 @@
-var HttpClient = require('../lib/http-client'),
-  HttpMeta = require('../lib/http-meta'),
-  seq = require('seq'),
-  util = require('util'),
-  assert = require('assert'),
-  test = require('../lib/utils').test;
+var Client = require('../lib/http-client')
+  , Meta = require('../lib/http-meta')
+  , util = require('util')
+  , assert = require('assert');
 
 describe('http client',function(){
 
-  var db = new HttpClient()
+  var db = new Client()
     , bucket;
 
   it('.save(bucket,key,data,{returnbody:true},fn)',function(done){
@@ -119,9 +117,9 @@ describe('http client',function(){
   })
 
   it('should emit error when trying to connect to non-existent instance',function(done){
-    var db2 = new HttpClient({port:64208})
+    var db2 = new Client({port:64208})
     db2.on('error',function(err){
-      err.should.exist
+      err.should.have.property('code','ECONNREFUSED')
       done()
     })
     db2.get('test-users','test+text@email.com')
@@ -130,9 +128,26 @@ describe('http client',function(){
   describe('streaming keys',function(){
     var many = new Array(500).join().split(',').map(function(x,i){return i})
 
+    // remove all previous keys in "test-keys"
     before(function(done){
-      // TODO remove all previous keys in "test-keys"
-      done()
+      var pending = 0
+        , keys = [];
+      function gone(err){
+        assert(!err,err)
+        --pending || done()
+      }
+      db.keys('test-keys')
+        .on('keys',function(keys){
+          pending += keys.length
+          keys.forEach(function(key){
+            db.remove('test-keys',key,gone)
+          })
+        })
+        .on('error',done)
+        .on('end',function(){
+          pending || done()
+        })
+        .start()
     })
 
     it('should create 500 keys',function(done){
@@ -148,6 +163,7 @@ describe('http client',function(){
     })
 
     // FIXME this one fails...
+    //       probably because of the ones that was POSTed
     // it('should stream those 500 keys',function(done){
     //   var keys = [];
     //   db.keys('test-keys')
@@ -175,7 +191,7 @@ describe('http client',function(){
   describe('map reduce',function(){
 
     // FIXME this one fails with status 500
-    // probably because of "test+text@email.com" (the + being url decoded away...)
+    //       probably because of "test+text@email.com" (the + being url decoded away...)
     // it('should map users',function(done){
     //   db.add('test-users').map('Riak.mapValuesJson').run(function(err,users,meta){
     //     // TODO assertions...
@@ -215,11 +231,11 @@ describe('http client',function(){
   describe('custom meta',function(){
 
     function CustomMeta(){
-      HttpMeta.apply(this, arguments);
+      Meta.apply(this, arguments);
     }
-    util.inherits(CustomMeta, HttpMeta);
+    util.inherits(CustomMeta, Meta);
 
-    var _parse = HttpMeta.prototype.parse;
+    var _parse = Meta.prototype.parse;
     CustomMeta.prototype.parse = function(data) {
       var result = _parse.call(this, data);
       if (result instanceof Object) result.intercepted = true;
